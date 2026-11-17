@@ -85,9 +85,9 @@ fun PantallaTareas(
                     }
 
                     Button(
-                        onClick = { viewModel.tareaLargaMala() }
+                        onClick = { viewModel.tareaLarga() }
                     ) {
-                        Text("Tarea larga (MAL)")
+                        Text("Tarea larga")
                     }
                     Text(
                         text = mensaje,
