@@ -14,7 +14,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.async
 
 class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
     private val _mensaje = MutableStateFlow("Listo")
@@ -91,6 +93,62 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
     }
     private val _carga = MutableStateFlow<CargaUi>(CargaUi.Inicial)
     val carga: StateFlow<CargaUi> = _carga.asStateFlow()
-// TODO Paso 6: fun cargarUnaPorUna() y fun cargarALaVez()
+
+    fun cargarUnaPorUna() {
+        if (_carga.value == CargaUi.Cargando) return
+
+        _carga.value = CargaUi.Cargando
+
+        viewModelScope.launch {
+            val inicio = System.currentTimeMillis()
+
+            val perfil = repo.cargarPerfil()
+            val pedidos = repo.cargarPedidos(false)
+
+            val milisegundos = System.currentTimeMillis() - inicio
+
+            _carga.value = CargaUi.Exito(
+                modo = "Una por una",
+                perfil = perfil,
+                pedidos = pedidos.size,
+                milisegundos = milisegundos
+            )
+        }
+    }
+
+    fun cargarALaVez() {
+        if (_carga.value == CargaUi.Cargando) return
+
+        _carga.value = CargaUi.Cargando
+
+        viewModelScope.launch {
+            val inicio = System.currentTimeMillis()
+
+            val (perfil, pedidos) = coroutineScope {
+                val perfilPendiente = async {
+                    repo.cargarPerfil()
+                }
+
+                val pedidosPendientes = async {
+                    repo.cargarPedidos(false)
+                }
+
+                Pair(
+                    perfilPendiente.await(),
+                    pedidosPendientes.await()
+                )
+            }
+
+            val milisegundos = System.currentTimeMillis() - inicio
+
+            _carga.value = CargaUi.Exito(
+                modo = "A la vez",
+                perfil = perfil,
+                pedidos = pedidos.size,
+                milisegundos = milisegundos
+            )
+        }
+    }
+
 // TODO Paso 7: simularError y manejo de errores
 }

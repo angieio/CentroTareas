@@ -18,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.tecsup.centrotareas.model.CargaUi
 import com.tecsup.centrotareas.model.PrimosUi
 import com.tecsup.centrotareas.viewmodel.TareasViewModel
 
@@ -55,6 +57,7 @@ fun PantallaTareas(
     val primos by viewModel.primos.collectAsState()
     var numero by remember { mutableStateOf("") }
     var ultimoHasta by remember { mutableStateOf(500000) }
+    val carga by viewModel.carga.collectAsState()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -246,15 +249,12 @@ fun PantallaTareas(
 
                     when (val estado = primos) {
                         PrimosUi.Inicial -> Unit
-
                         PrimosUi.Calculando -> {
                             Text("Calculando...")
                         }
-
                         PrimosUi.Cancelado -> {
                             Text("Cancelado")
                         }
-
                         is PrimosUi.Listo -> {
                             Column(
                                 modifier = Modifier
@@ -271,6 +271,106 @@ fun PantallaTareas(
                                     color = Color(0xFF24652D),
                                     fontWeight = FontWeight.Bold
                                 )
+                                Text(
+                                    text = "Tiempo: ${estado.milisegundos} ms",
+                                    color = Color(0xFF24652D)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Dos cargas",
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.cargarUnaPorUna() },
+                            enabled = carga != CargaUi.Cargando,
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (carga != CargaUi.Cargando) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.12f
+                                    )
+                                }
+                            )
+                        ) {
+                            Text("Una por una")
+                        }
+
+                        Button(
+                            onClick = { viewModel.cargarALaVez() },
+                            enabled = carga != CargaUi.Cargando
+                        ) {
+                            Text("A la vez")
+                        }
+                    }
+
+                    when (val estado = carga) {
+                        CargaUi.Inicial -> Unit
+
+                        CargaUi.Cargando -> {
+                            CircularProgressIndicator()
+                        }
+
+                        is CargaUi.Exito -> {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = Color(0xFFE3F3E5),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Modo: ${estado.modo}",
+                                    color = Color(0xFF24652D),
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    text = "Perfil: ${estado.perfil}",
+                                    color = Color(0xFF24652D)
+                                )
+
+                                Text(
+                                    text = "Pedidos: ${estado.pedidos}",
+                                    color = Color(0xFF24652D)
+                                )
 
                                 Text(
                                     text = "Tiempo: ${estado.milisegundos} ms",
@@ -278,6 +378,8 @@ fun PantallaTareas(
                                 )
                             }
                         }
+
+                        is CargaUi.Error -> Unit // Pendiente del paso 7.
                     }
                 }
             }
