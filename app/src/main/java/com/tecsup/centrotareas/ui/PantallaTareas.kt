@@ -3,16 +3,19 @@ package com.tecsup.centrotareas.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -37,6 +40,7 @@ fun PantallaTareas(
     val mensaje by viewModel.mensaje.collectAsState()
     var toques by remember { mutableStateOf(0) }
     val progreso by viewModel.progreso.collectAsState()
+    val corriendo by viewModel.corriendo.collectAsState()
 
 
     Scaffold(
@@ -81,21 +85,57 @@ fun PantallaTareas(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Text(
+                        text = "Tarea con progreso",
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+
                     Button(
                         onClick = { toques++ }
                     ) {
                         Text("Tócame: $toques")
                     }
 
-                    Button(
-                        onClick = { viewModel.tareaLarga() }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Iniciar")
+                        Button(
+                            onClick = { viewModel.tareaLarga() },
+                            enabled = !corriendo
+                        ) {
+                            Text("Iniciar")
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.cancelar() },
+                            enabled = corriendo,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurface
+                                    .copy(alpha = 0.38f)
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (corriendo) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                }
+                            )
+                        ) {
+                            Text("Cancelar")
+                        }
                     }
 
                     LinearProgressIndicator(
                         progress = { progreso },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.outline,
+                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                     )
 
                     Text(
