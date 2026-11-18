@@ -17,6 +17,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.async
+import java.io.IOException
 
 class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
     private val _mensaje = MutableStateFlow("Listo")
@@ -111,6 +112,25 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
         _simularError.value = valor
     }
 
+    private suspend fun <T> conReintentos(block: suspend () -> T): T {
+        val delays = listOf(500L, 1000L, 2000L)
+        var intento = 0
+        val maxIntentos = 4
+        while (true) {
+            intento++
+            try {
+                return block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (intento >= maxIntentos || e !is IOException) {
+                    throw e
+                }
+                delay(delays[intento - 1])
+            }
+        }
+    }
+
     fun cargarUnaPorUna() {
         if (_carga.value == CargaUi.Cargando) return
 
@@ -121,8 +141,11 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
             val inicio = System.currentTimeMillis()
 
             try {
-                val perfil = repo.cargarPerfil()
-                val pedidos = repo.cargarPedidos(provocarError)
+                val (perfil, pedidos) = conReintentos {
+                    val p = repo.cargarPerfil()
+                    val ped = repo.cargarPedidos(provocarError)
+                    Pair(p, ped)
+                }
 
                 val milisegundos = System.currentTimeMillis() - inicio
                 contadorCargasExitosas++
@@ -159,19 +182,21 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
             val inicio = System.currentTimeMillis()
 
             try {
-                val (perfil, pedidos) = coroutineScope {
-                    val perfilPendiente = async {
-                        repo.cargarPerfil()
-                    }
+                val (perfil, pedidos) = conReintentos {
+                    coroutineScope {
+                        val perfilPendiente = async {
+                            repo.cargarPerfil()
+                        }
 
-                    val pedidosPendientes = async {
-                        repo.cargarPedidos(provocarError)
-                    }
+                        val pedidosPendientes = async {
+                            repo.cargarPedidos(provocarError)
+                        }
 
-                    Pair(
-                        perfilPendiente.await(),
-                        pedidosPendientes.await()
-                    )
+                        Pair(
+                            perfilPendiente.await(),
+                            pedidosPendientes.await()
+                        )
+                    }
                 }
 
                 val milisegundos = System.currentTimeMillis() - inicio
