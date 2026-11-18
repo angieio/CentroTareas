@@ -1,10 +1,15 @@
 package com.tecsup.centrotareas.model
 
+sealed interface PrimosRepoState {
+    data class Progreso(val progreso: Float) : PrimosRepoState
+    data class Resultado(val cantidad: Int, val milisegundos: Long) : PrimosRepoState
+}
+
 sealed interface PrimosUi {
     data object Inicial : PrimosUi
-    data object Calculando : PrimosUi
+    data class Calculando(val progreso: Float = 0f) : PrimosUi
+    data class Cancelado(val progreso: Float = 0f) : PrimosUi
     data class Listo(val cantidad: Int, val milisegundos: Long) : PrimosUi
-    data object Cancelado : PrimosUi
 }
 sealed interface CargaUi {
     data object Inicial : CargaUi

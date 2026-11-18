@@ -210,7 +210,7 @@ fun PantallaTareas(
                             keyboardType = KeyboardType.Number
                         ),
                         singleLine = true,
-                        enabled = primos != PrimosUi.Calculando
+                        enabled = primos !is PrimosUi.Calculando
                     )
 
                     Row(
@@ -225,7 +225,7 @@ fun PantallaTareas(
                                     viewModel.contar(hasta)
                                 }
                             },
-                            enabled = primos != PrimosUi.Calculando &&
+                            enabled = primos !is PrimosUi.Calculando &&
                                     (numero.toIntOrNull()?.let { it >= 2 } == true)
                         ) {
                             Text("Contar")
@@ -233,10 +233,10 @@ fun PantallaTareas(
 
                         OutlinedButton(
                             onClick = { viewModel.cancelarPrimos() },
-                            enabled = primos == PrimosUi.Calculando,
+                            enabled = primos is PrimosUi.Calculando,
                             border = BorderStroke(
                                 width = 1.dp,
-                                color = if (primos == PrimosUi.Calculando) {
+                                color = if (primos is PrimosUi.Calculando) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurface.copy(
@@ -251,11 +251,44 @@ fun PantallaTareas(
 
                     when (val estado = primos) {
                         PrimosUi.Inicial -> Unit
-                        PrimosUi.Calculando -> {
-                            Text("Calculando...")
+                        is PrimosUi.Calculando -> {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                LinearProgressIndicator(
+                                    progress = { estado.progreso },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.outline,
+                                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                                Text(
+                                    text = "Calculando... ${(estado.progreso * 100).toInt()} %",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
-                        PrimosUi.Cancelado -> {
-                            Text("Cancelado")
+                        is PrimosUi.Cancelado -> {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                LinearProgressIndicator(
+                                    progress = { estado.progreso },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.error,
+                                    trackColor = MaterialTheme.colorScheme.outline,
+                                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                                Text(
+                                    text = "Cancelado (${(estado.progreso * 100).toInt()} %)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                         is PrimosUi.Listo -> {
                             Column(

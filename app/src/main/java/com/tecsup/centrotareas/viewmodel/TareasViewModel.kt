@@ -5,13 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tecsup.centrotareas.data.TareasRepository
 import com.tecsup.centrotareas.model.CargaUi
+import com.tecsup.centrotareas.model.PrimosRepoState
 import com.tecsup.centrotareas.model.PrimosUi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -39,21 +38,17 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
                     "HILO",
                     "Antes: ${Thread.currentThread().name}"
                 )
-                withContext(Dispatchers.Default) {
-                    Log.d(
-                        "HILO",
-                        "Dentro: ${Thread.currentThread().name}"
-                    )
-                    for (i in 1..100) {
-                        delay(40)
-                        _progreso.value = i / 100f
-                    }
+                repo.iniciarTareaConProgreso().collect { valor ->
+                    _progreso.value = valor
                 }
                 Log.d(
                     "HILO",
                     "Despues: ${Thread.currentThread().name}"
                 )
                 _mensaje.value = "Terminó"
+            } catch (e: CancellationException) {
+                _mensaje.value = "Cancelado"
+                throw e
             } finally {
                 _corriendo.value = false
             }
@@ -69,21 +64,30 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
     private val _primos = MutableStateFlow<PrimosUi>(PrimosUi.Inicial)
     val primos: StateFlow<PrimosUi> = _primos.asStateFlow()
     private var trabajoPrimos: Job? = null
+    private var ultimoProgresoPrimos: Float = 0f
 
     fun contar(hasta: Int) {
-        if (hasta < 2 || _primos.value == PrimosUi.Calculando) return
-        _primos.value = PrimosUi.Calculando
+        if (hasta < 2 || _primos.value is PrimosUi.Calculando) return
+        _primos.value = PrimosUi.Calculando(0f)
+        ultimoProgresoPrimos = 0f
         trabajoPrimos = viewModelScope.launch {
-            val inicio = System.currentTimeMillis()
             try {
-                val cantidad = repo.contarPrimos(hasta)
-                val milisegundos = System.currentTimeMillis() - inicio
-                _primos.value = PrimosUi.Listo(
-                    cantidad = cantidad,
-                    milisegundos = milisegundos
-                )
+                repo.contarPrimosConProgreso(hasta).collect { estadoRepo ->
+                    when (estadoRepo) {
+                        is PrimosRepoState.Progreso -> {
+                            ultimoProgresoPrimos = estadoRepo.progreso
+                            _primos.value = PrimosUi.Calculando(estadoRepo.progreso)
+                        }
+                        is PrimosRepoState.Resultado -> {
+                            _primos.value = PrimosUi.Listo(
+                                cantidad = estadoRepo.cantidad,
+                                milisegundos = estadoRepo.milisegundos
+                            )
+                        }
+                    }
+                }
             } catch (e: CancellationException) {
-                _primos.value = PrimosUi.Cancelado
+                _primos.value = PrimosUi.Cancelado(ultimoProgresoPrimos)
                 throw e
             }
         }
