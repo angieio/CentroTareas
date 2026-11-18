@@ -65,6 +65,7 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
         trabajo?.cancel()
         _mensaje.value = "Cancelado"
     }
+
     private val _primos = MutableStateFlow<PrimosUi>(PrimosUi.Inicial)
     val primos: StateFlow<PrimosUi> = _primos.asStateFlow()
     private var trabajoPrimos: Job? = null
@@ -91,64 +92,89 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
     fun cancelarPrimos() {
         trabajoPrimos?.cancel()
     }
+
     private val _carga = MutableStateFlow<CargaUi>(CargaUi.Inicial)
     val carga: StateFlow<CargaUi> = _carga.asStateFlow()
+    private val _simularError = MutableStateFlow(false)
+    val simularError: StateFlow<Boolean> = _simularError.asStateFlow()
+
+    fun cambiarSimularError(valor: Boolean) {
+        _simularError.value = valor
+    }
 
     fun cargarUnaPorUna() {
         if (_carga.value == CargaUi.Cargando) return
 
+        val provocarError = _simularError.value
         _carga.value = CargaUi.Cargando
 
         viewModelScope.launch {
             val inicio = System.currentTimeMillis()
 
-            val perfil = repo.cargarPerfil()
-            val pedidos = repo.cargarPedidos(false)
+            try {
+                val perfil = repo.cargarPerfil()
+                val pedidos = repo.cargarPedidos(provocarError)
 
-            val milisegundos = System.currentTimeMillis() - inicio
+                val milisegundos = System.currentTimeMillis() - inicio
 
-            _carga.value = CargaUi.Exito(
-                modo = "Una por una",
-                perfil = perfil,
-                pedidos = pedidos.size,
-                milisegundos = milisegundos
-            )
+                _carga.value = CargaUi.Exito(
+                    modo = "Una por una",
+                    perfil = perfil,
+                    pedidos = pedidos.size,
+                    milisegundos = milisegundos
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _carga.value = CargaUi.Error(
+                    mensaje = "No se pudo cargar: " +
+                            (e.message ?: "Error desconocido")
+                )
+            }
         }
     }
 
     fun cargarALaVez() {
         if (_carga.value == CargaUi.Cargando) return
 
+        val provocarError = _simularError.value
         _carga.value = CargaUi.Cargando
 
         viewModelScope.launch {
             val inicio = System.currentTimeMillis()
 
-            val (perfil, pedidos) = coroutineScope {
-                val perfilPendiente = async {
-                    repo.cargarPerfil()
+            try {
+                val (perfil, pedidos) = coroutineScope {
+                    val perfilPendiente = async {
+                        repo.cargarPerfil()
+                    }
+
+                    val pedidosPendientes = async {
+                        repo.cargarPedidos(provocarError)
+                    }
+
+                    Pair(
+                        perfilPendiente.await(),
+                        pedidosPendientes.await()
+                    )
                 }
 
-                val pedidosPendientes = async {
-                    repo.cargarPedidos(false)
-                }
+                val milisegundos = System.currentTimeMillis() - inicio
 
-                Pair(
-                    perfilPendiente.await(),
-                    pedidosPendientes.await()
+                _carga.value = CargaUi.Exito(
+                    modo = "A la vez",
+                    perfil = perfil,
+                    pedidos = pedidos.size,
+                    milisegundos = milisegundos
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _carga.value = CargaUi.Error(
+                    mensaje = "No se pudo cargar: " +
+                            (e.message ?: "Error desconocido")
                 )
             }
-
-            val milisegundos = System.currentTimeMillis() - inicio
-
-            _carga.value = CargaUi.Exito(
-                modo = "A la vez",
-                perfil = perfil,
-                pedidos = pedidos.size,
-                milisegundos = milisegundos
-            )
         }
     }
-
-// TODO Paso 7: simularError y manejo de errores
 }

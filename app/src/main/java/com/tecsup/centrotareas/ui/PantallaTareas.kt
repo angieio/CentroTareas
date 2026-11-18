@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -58,6 +59,7 @@ fun PantallaTareas(
     var numero by remember { mutableStateOf("") }
     var ultimoHasta by remember { mutableStateOf(500000) }
     val carga by viewModel.carga.collectAsState()
+    val simularError by viewModel.simularError.collectAsState()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -310,6 +312,21 @@ fun PantallaTareas(
                     )
 
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Simular error")
+
+                        Switch(
+                            checked = simularError,
+                            onCheckedChange = { valor ->
+                                viewModel.cambiarSimularError(valor)
+                            }
+                        )
+                    }
+
+                    Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedButton(
@@ -379,7 +396,37 @@ fun PantallaTareas(
                             }
                         }
 
-                        is CargaUi.Error -> Unit // Pendiente del paso 7.
+                        is CargaUi.Error -> {
+                            Text(
+                                text = estado.mensaje,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = MaterialTheme.colorScheme.errorContainer,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(
+                                        horizontal = 12.dp,
+                                        vertical = 10.dp
+                                    ),
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            OutlinedButton(
+                                onClick = { viewModel.cargarALaVez() },
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                ),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Text("Reintentar")
+                            }
+                        }
                     }
                 }
             }
