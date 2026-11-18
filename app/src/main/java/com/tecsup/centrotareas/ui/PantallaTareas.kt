@@ -11,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -35,6 +36,8 @@ fun PantallaTareas(
 ) {
     val mensaje by viewModel.mensaje.collectAsState()
     var toques by remember { mutableStateOf(0) }
+    val progreso by viewModel.progreso.collectAsState()
+
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -87,8 +90,19 @@ fun PantallaTareas(
                     Button(
                         onClick = { viewModel.tareaLarga() }
                     ) {
-                        Text("Tarea larga")
+                        Text("Iniciar")
                     }
+
+                    LinearProgressIndicator(
+                        progress = { progreso },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text(
+                        text = "${(progreso * 100).toInt()} %",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
                     Text(
                         text = mensaje,
                         style = MaterialTheme.typography.bodyMedium
