@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlin.coroutines.cancellation.CancellationException
 
 class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
     private val _mensaje = MutableStateFlow("Listo")
@@ -27,36 +28,29 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
 
     fun tareaLarga() {
         if (_corriendo.value) return
-
         _corriendo.value = true
-
         trabajo = viewModelScope.launch {
             try {
                 _progreso.value = 0f
                 _mensaje.value = "Trabajando..."
-
                 Log.d(
                     "HILO",
                     "Antes: ${Thread.currentThread().name}"
                 )
-
                 withContext(Dispatchers.Default) {
                     Log.d(
                         "HILO",
                         "Dentro: ${Thread.currentThread().name}"
                     )
-
                     for (i in 1..100) {
                         delay(40)
                         _progreso.value = i / 100f
                     }
                 }
-
                 Log.d(
                     "HILO",
                     "Despues: ${Thread.currentThread().name}"
                 )
-
                 _mensaje.value = "Terminó"
             } finally {
                 _corriendo.value = false
@@ -66,15 +60,35 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
 
     fun cancelar() {
         if (!_corriendo.value) return
-
         trabajo?.cancel()
         _mensaje.value = "Cancelado"
     }
-// ----- Contar primos (paso 5)
     private val _primos = MutableStateFlow<PrimosUi>(PrimosUi.Inicial)
     val primos: StateFlow<PrimosUi> = _primos.asStateFlow()
-    // TODO Paso 5: fun contar(hasta: Int) y fun cancelarPrimos()
-// ----- Dos cargas (pasos 6 y 7)
+    private var trabajoPrimos: Job? = null
+
+    fun contar(hasta: Int) {
+        if (hasta < 2 || _primos.value == PrimosUi.Calculando) return
+        _primos.value = PrimosUi.Calculando
+        trabajoPrimos = viewModelScope.launch {
+            val inicio = System.currentTimeMillis()
+            try {
+                val cantidad = repo.contarPrimos(hasta)
+                val milisegundos = System.currentTimeMillis() - inicio
+                _primos.value = PrimosUi.Listo(
+                    cantidad = cantidad,
+                    milisegundos = milisegundos
+                )
+            } catch (e: CancellationException) {
+                _primos.value = PrimosUi.Cancelado
+                throw e
+            }
+        }
+    }
+
+    fun cancelarPrimos() {
+        trabajoPrimos?.cancel()
+    }
     private val _carga = MutableStateFlow<CargaUi>(CargaUi.Inicial)
     val carga: StateFlow<CargaUi> = _carga.asStateFlow()
 // TODO Paso 6: fun cargarUnaPorUna() y fun cargarALaVez()
