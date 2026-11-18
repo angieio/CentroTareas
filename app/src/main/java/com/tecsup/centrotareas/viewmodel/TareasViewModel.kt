@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tecsup.centrotareas.data.TareasRepository
+import com.tecsup.centrotareas.model.CargaHistoricoItem
 import com.tecsup.centrotareas.model.CargaUi
 import com.tecsup.centrotareas.model.PrimosRepoState
 import com.tecsup.centrotareas.model.PrimosUi
@@ -99,6 +100,10 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
 
     private val _carga = MutableStateFlow<CargaUi>(CargaUi.Inicial)
     val carga: StateFlow<CargaUi> = _carga.asStateFlow()
+    private val _historialCargas = MutableStateFlow<List<CargaHistoricoItem>>(emptyList())
+    val historialCargas: StateFlow<List<CargaHistoricoItem>> = _historialCargas.asStateFlow()
+    private var contadorCargasExitosas = 0
+
     private val _simularError = MutableStateFlow(false)
     val simularError: StateFlow<Boolean> = _simularError.asStateFlow()
 
@@ -120,6 +125,12 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
                 val pedidos = repo.cargarPedidos(provocarError)
 
                 val milisegundos = System.currentTimeMillis() - inicio
+                contadorCargasExitosas++
+                _historialCargas.value = _historialCargas.value + CargaHistoricoItem(
+                    numero = contadorCargasExitosas,
+                    modo = "Una por una",
+                    milisegundos = milisegundos
+                )
 
                 _carga.value = CargaUi.Exito(
                     modo = "Una por una",
@@ -164,6 +175,12 @@ class TareasViewModel(private val repo: TareasRepository) : ViewModel() {
                 }
 
                 val milisegundos = System.currentTimeMillis() - inicio
+                contadorCargasExitosas++
+                _historialCargas.value = _historialCargas.value + CargaHistoricoItem(
+                    numero = contadorCargasExitosas,
+                    modo = "A la vez",
+                    milisegundos = milisegundos
+                )
 
                 _carga.value = CargaUi.Exito(
                     modo = "A la vez",
